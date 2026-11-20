@@ -1,0 +1,7 @@
+{
+  "name": "vmix-turnier",
+  "version": "1.0.0",
+  "description": "Animierte Grafiken für vMix – Kleinfeld-Fußballturnier",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" }
+}

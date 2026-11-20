@@ -1,0 +1,25 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Matchup</title>
+<link rel="stylesheet" href="overlay.css"><script src="overlay.js"></script></head><body>
+<div class="mu" id="mu">
+  <div class="head" id="head"></div>
+  <div class="t home" id="h"></div>
+  <div class="vs">VS</div>
+  <div class="t away" id="a"></div>
+  <div class="info" id="info"></div>
+</div>
+<script>
+let sig = '';
+const side = t => `<div class="badge"><img src="${esc(logoUrl(t))}"></div>${esc(t.name)}<div class="bar" style="background:${t.color}"></div>`;
+const grp = m => /^[A-Z]$/.test(m.group) ? `Gruppe ${m.group}` : m.group;
+connect(s => {
+  const m = curMatch(); if (!m) return;
+  const x = m.id + m.home + m.away + JSON.stringify([team(m.home), team(m.away)]) + m.time + m.field;
+  if (x !== sig) {
+    sig = x;
+    head.textContent = `${s.tournament.title} · ${grp(m)}`;
+    h.innerHTML = side(team(m.home)); a.innerHTML = side(team(m.away));
+    info.textContent = `${m.field}  ·  ${m.time} Uhr  ·  Spiel ${m.id}`;
+  }
+  mu.classList.toggle('show', s.graphics.matchup);
+});
+</script></body></html>

@@ -1,0 +1,27 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Spielplan / Ergebnisse</title>
+<link rel="stylesheet" href="overlay.css"><script src="overlay.js"></script></head><body>
+<!-- fixtures.html = nächste Spiele, fixtures.html?mode=results = letzte Ergebnisse -->
+<div class="panel fx" id="p"></div>
+<script>
+const mode = param('mode') === 'results' ? 'results' : 'fixtures';
+const N = 7;
+let sig = '';
+connect(s => {
+  let list, title;
+  if (mode === 'results') {
+    title = 'ERGEBNISSE';
+    list = s.matches.filter(m => m.status === 'finished').slice(-N).reverse();
+  } else {
+    title = 'NÄCHSTE SPIELE';
+    list = s.matches.filter(m => m.status !== 'finished' && m.id >= s.currentMatch).slice(0, N);
+  }
+  const html = `<h1>${title}<small>${esc(s.tournament.title)}</small></h1>` +
+    (list.length ? list.map((m, i) => {
+      const h = team(m.home), a = team(m.away);
+      const mid = m.status === 'scheduled' ? `<div class="mid vs">VS</div>` : `<div class="mid">${m.hs} : ${m.as}</div>`;
+      return `<div class="row" style="--i:${i}"><div class="time">${esc(m.time)}</div><div class="side h">${badge(h)}${esc(h.name)}</div>${mid}<div class="side a">${badge(a)}${esc(a.name)}</div><div class="field">${esc(m.field)} · ${/^[A-Z]$/.test(m.group) ? 'Gr. ' : ''}${esc(m.group)}</div></div>`;
+    }).join('') : '<div class="row" style="--i:0"><div class="tcell" style="justify-content:center">Noch keine Einträge</div></div>');
+  if (html !== sig) { sig = html; p.innerHTML = html; }
+  p.classList.toggle('show', s.graphics[mode]);
+});
+</script></body></html>

@@ -1,0 +1,29 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Tor / Karte</title>
+<link rel="stylesheet" href="overlay.css"><script src="overlay.js"></script></head><body>
+<!-- Läuft automatisch: erscheint bei Tor/Karte, verschwindet nach 7 s. Dauerhaft in vMix als Overlay-Input lassen. -->
+<div class="alert ease" id="al">
+  <div class="box">
+    <div class="kind" id="kind"></div>
+    <div class="txt"><div class="player" id="player"></div><div class="teamline" id="tl"></div></div>
+    <div class="res" id="res"></div>
+  </div>
+</div>
+<script>
+let seen = null, timer;
+connect(s => {
+  const a = s.alert;
+  if (seen === null) { seen = a ? a.id : 0; return; }   // beim Laden alte Alerts nicht abspielen
+  if (!a || a.id === seen) return;
+  seen = a.id;
+  const t = team(a.team);
+  const el = document.getElementById('al');
+  el.className = 'alert ease ' + (a.kind === 'goal' ? 'goal' : a.kind);
+  kind.textContent = a.kind === 'goal' ? 'TOR!' : a.kind === 'yellow' ? 'GELB' : 'ROT';
+  player.textContent = a.player || t.name;
+  tl.textContent = (a.player ? t.name : '') + (a.minute ? (a.player ? ' · ' : '') + a.minute + '. Min.' : '');
+  res.textContent = a.kind === 'goal' ? `${a.hs} : ${a.as}` : '';
+  res.style.display = a.kind === 'goal' ? 'flex' : 'none';
+  void el.offsetWidth; el.classList.add('show');
+  clearTimeout(timer); timer = setTimeout(() => el.classList.remove('show'), 7000);
+});
+</script></body></html>

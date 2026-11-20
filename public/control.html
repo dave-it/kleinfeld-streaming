@@ -1,0 +1,116 @@
+<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Turnier-Steuerung</title>
+<style>
+:root{--bg:#0f1420;--card:#1a2233;--line:#2a3550;--txt:#e8ecf5;--mut:#8b97b3;--acc:#ffd400;--on:#2a9d4b;--red:#e63946}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.4 system-ui,Segoe UI,Arial,sans-serif}
+header{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;background:var(--card);border-bottom:1px solid var(--line)}
+header h1{margin:0;font-size:18px}#conn{font-size:13px;color:var(--mut)}#conn.ok{color:var(--on)}
+main{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:16px;padding:16px;align-items:start}
+section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+section h2{margin:0 0 12px;font-size:13px;letter-spacing:1px;text-transform:uppercase;color:var(--mut)}
+button{background:#26324d;color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font:inherit;cursor:pointer}
+button:hover{background:#31406a}button.on{background:var(--on);border-color:var(--on)}button.big{font-size:20px;padding:14px 18px;font-weight:700}
+button.acc{background:var(--acc);color:#111;border-color:var(--acc)}button.red{background:var(--red);border-color:var(--red)}
+input,select{background:#0f1420;color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px;font:inherit;width:100%}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}.grow{flex:1}
+.score{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;text-align:center}
+.score .n{font-size:64px;font-weight:800;color:var(--acc);line-height:1}.score .t{font-size:18px;font-weight:700;margin-bottom:6px}
+.clock{font-size:44px;font-weight:800;font-variant-numeric:tabular-nums;text-align:center;margin-bottom:8px}
+.gfx{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.match{display:flex;gap:8px;align-items:center;padding:6px 8px;border-radius:8px;cursor:pointer;font-size:14px}
+.match:hover{background:#222c44}.match.cur{background:#2c3a5e;outline:1px solid var(--acc)}
+.match .id{width:28px;color:var(--mut)}.match .tm{width:48px;color:var(--mut)}.match .nm{flex:1}.match .sc{font-weight:800;min-width:48px;text-align:center}
+.st{font-size:11px;padding:2px 6px;border-radius:6px;background:#333}.st.live{background:var(--red)}.st.finished{background:#444;color:var(--mut)}
+#matches{max-height:520px;overflow:auto}
+.team{display:grid;grid-template-columns:34px 1fr 70px 44px;gap:6px;margin-bottom:6px;align-items:center}
+.team span{color:var(--mut);font-size:12px}input[type=color]{padding:2px;height:34px}
+.urls div{display:flex;gap:8px;align-items:center;margin-bottom:6px;font-size:13px}.urls code{flex:1;background:#0f1420;padding:6px 8px;border-radius:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hint{color:var(--mut);font-size:12px;margin-top:8px}
+</style></head><body>
+<header><h1>⚽ <span id="ttl">Turnier</span> – Steuerung</h1><div><a href="/matchups" style="color:var(--acc);margin-right:16px">Matchups wählen →</a><span id="conn">verbinde…</span></div></header>
+<main>
+  <section>
+    <h2>Aktuelles Spiel</h2>
+    <div class="score">
+      <div><div class="t" id="hn"></div><div class="n" id="hs">0</div></div><div style="font-size:30px">:</div><div><div class="t" id="an"></div><div class="n" id="as">0</div></div>
+    </div>
+    <div class="row" style="margin-top:12px"><input id="player" placeholder="Spieler / Torschütze (optional)"></div>
+    <div class="score" style="margin-bottom:8px">
+      <div class="row" style="justify-content:center"><button class="big acc" onclick="goal('home',1)">+ Tor</button><button onclick="goal('home',-1)">−</button></div><div></div>
+      <div class="row" style="justify-content:center"><button class="big acc" onclick="goal('away',1)">+ Tor</button><button onclick="goal('away',-1)">−</button></div>
+    </div>
+    <div class="score">
+      <div class="row" style="justify-content:center"><button onclick="card('home','yellow')">🟨 Gelb</button><button class="red" onclick="card('home','red')">🟥 Rot</button></div><div></div>
+      <div class="row" style="justify-content:center"><button onclick="card('away','yellow')">🟨 Gelb</button><button class="red" onclick="card('away','red')">🟥 Rot</button></div>
+    </div>
+    <div class="hint">Tor/Karte löst automatisch die Einblendung (alert.html) aus.</div>
+    <h2 style="margin-top:18px">Spielzeit</h2>
+    <div class="clock" id="clock">00:00</div>
+    <div class="row" style="justify-content:center">
+      <button class="on" onclick="clk('start')">▶ Start</button><button onclick="clk('stop')">⏸ Stop</button><button onclick="clk('reset')">⟲ Reset</button>
+      <button onclick="clk('add',-60)">−1 Min</button><button onclick="clk('add',60)">+1 Min</button>
+    </div>
+    <div class="row"><input id="setmin" type="number" min="0" placeholder="Minute setzen" style="width:150px"><button onclick="clk('set',(+setmin.value||0)*60)">Setzen</button>
+      <span class="grow"></span>
+      <button onclick="status('live')">Live</button><button class="acc" onclick="status('finished')">Spiel beenden</button></div>
+  </section>
+
+  <section>
+    <h2>Grafiken ein-/ausblenden</h2>
+    <div class="gfx" id="gfx"></div>
+    <div class="row" style="margin-top:12px"><label style="color:var(--mut)">Tabelle Gruppe</label><select id="grp" style="width:90px" onchange="send({type:'tableGroup',group:grp.value})"></select></div>
+    <div class="hint">In vMix alle Overlays dauerhaft als Browser-Input im Overlay-Kanal lassen – sie blenden sich selbst animiert ein/aus.</div>
+    <h2 style="margin-top:18px">vMix-URLs (Browser-Input, 1920×1080)</h2>
+    <div class="urls" id="urls"></div>
+  </section>
+
+  <section>
+    <h2>Spiele (<span id="mcount"></span>)</h2>
+    <div id="matches"></div>
+  </section>
+
+  <section>
+    <h2>Teams</h2>
+    <div class="row"><input id="tt" placeholder="Turniername"><button onclick="send({type:'tournament',title:tt.value})">OK</button></div>
+    <div id="teams"></div>
+    <button class="acc" onclick="saveTeams()">Teams speichern</button>
+    <button class="red" style="float:right" onclick="if(confirm('Alles zurücksetzen (Ergebnisse + Teams)?'))send({type:'reset'})">Reset</button>
+  </section>
+</main>
+<script>
+let S=null,off=0,teamsSig='';
+const send=a=>fetch('/api/action',{method:'POST',body:JSON.stringify(a)});
+const goal=(side,d)=>{send({type:'goal',side,delta:d,player:player.value});if(d>0)player.value=''};
+const card=(side,color)=>{send({type:'card',side,color,player:player.value});player.value=''};
+const clk=(cmd,seconds)=>send({type:'clock',cmd,seconds});
+const status=s=>send({type:'status',status:s});
+const T=id=>S.teams.find(t=>t.id===id)||{};
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const GF={scorebug:'Scorebug',matchup:'Matchup (Intro)',table:'Tabelle',fixtures:'Nächste Spiele',results:'Ergebnisse'};
+const FILES={'Ebene 1 (Live)':'layer1.html','Ebene 2 (Vollbild)':'layer2.html'};
+
+function saveTeams(){
+  const teams=S.teams.map(t=>({id:t.id,name:document.getElementById('n'+t.id).value,short:document.getElementById('s'+t.id).value,color:document.getElementById('c'+t.id).value,logo:t.logo}));
+  send({type:'teams',teams});
+}
+function render(){
+  const m=S.matches.find(x=>x.id===S.currentMatch);
+  ttl.textContent=S.tournament.title;
+  if(document.activeElement!==tt)tt.value=S.tournament.title;
+  hn.textContent=T(m.home).name;an.textContent=T(m.away).name;hs.textContent=m.hs;as.textContent=m.as;
+  gfx.innerHTML=Object.keys(GF).map(k=>`<button class="big ${S.graphics[k]?'on':''}" onclick="send({type:'graphic',name:'${k}',visible:'toggle'})">${S.graphics[k]?'● ':'○ '}${GF[k]}</button>`).join('');
+  const groups=[...new Set(S.teams.map(t=>t.group))];
+  if(grp.options.length!==groups.length)grp.innerHTML=groups.map(g=>`<option>${g}</option>`).join('');
+  grp.value=S.tableGroup;
+  if(!urls.innerHTML)urls.innerHTML=Object.keys(FILES).map(k=>{const u=location.origin+'/overlay/'+FILES[k].split(' ')[0];return `<div><b style="width:130px">${k}</b><code>${u}</code><button onclick="navigator.clipboard.writeText('${u}')">Kopieren</button></div>`}).join('');
+  mcount.textContent=S.matches.length;
+  matches.innerHTML=S.matches.map(x=>`<div class="match ${x.id===S.currentMatch?'cur':''}" onclick="send({type:'setCurrent',matchId:${x.id}})"><span class="id">${x.id}</span><span class="tm">${x.time}</span><span class="nm">${esc(T(x.home).name)} – ${esc(T(x.away).name)} <small style="color:var(--mut)">(${x.group}, ${x.field})</small></span><span class="sc">${x.status==='scheduled'?'–':x.hs+':'+x.as}</span><span class="st ${x.status}">${x.status==='live'?'LIVE':x.status==='finished'?'Ende':'offen'}</span></div>`).join('');
+  const sig=JSON.stringify(S.teams);
+  if(sig!==teamsSig&&!teams.contains(document.activeElement)){teamsSig=sig;
+    teams.innerHTML=S.teams.map(t=>`<div class="team"><span>${t.group}</span><input id="n${t.id}" value="${esc(t.name)}"><input id="s${t.id}" value="${esc(t.short)}" maxlength="4"><input type="color" id="c${t.id}" value="${t.color}"></div>`).join('');}
+}
+setInterval(()=>{if(!S)return;const c=S.clock;const s=Math.floor(c.base+(c.running?(Date.now()+off-c.startedAt)/1000:0));clock.textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')},200);
+const es=new EventSource('/events');
+es.onopen=()=>{conn.textContent='● verbunden';conn.className='ok'};
+es.onerror=()=>{conn.textContent='getrennt – verbinde neu…';conn.className=''};
+es.onmessage=e=>{S=JSON.parse(e.data);off=S.now-Date.now();render()};
+</script></body></html>

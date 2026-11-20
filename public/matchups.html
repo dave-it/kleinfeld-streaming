@@ -1,0 +1,75 @@
+<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Matchups</title>
+<style>
+:root{--bg:#0f1420;--card:#1a2233;--line:#2a3550;--txt:#e8ecf5;--mut:#8b97b3;--acc:#ffd400;--on:#2a9d4b;--red:#e63946}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.4 system-ui,Segoe UI,Arial,sans-serif}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 20px;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+header h1{margin:0;font-size:18px}a{color:var(--acc);text-decoration:none}
+button,select,input{font:inherit;color:var(--txt);background:#26324d;border:1px solid var(--line);border-radius:8px;padding:8px 12px}
+button{cursor:pointer}button:hover{background:#31406a}button.on{background:var(--on);border-color:var(--on)}button.acc{background:var(--acc);color:#111;border-color:var(--acc);font-weight:700}
+input,select{background:#0f1420}
+.cur{display:flex;align-items:center;gap:10px}.cur img{height:34px}.cur b{font-size:17px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;padding:14px 20px 0}.chip.sel{background:var(--acc);color:#111;border-color:var(--acc);font-weight:700}
+.new{margin:14px 20px 0;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+.new label{display:flex;flex-direction:column;font-size:12px;color:var(--mut);gap:4px}.new select,.new input{min-width:150px}
+#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:12px;padding:16px 20px 40px}
+.m{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.m.current{outline:2px solid var(--acc)}.m .meta{display:flex;justify-content:space-between;font-size:12px;color:var(--mut)}
+.m .vs{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;text-align:center}
+.m .vs img{height:64px}.m .vs .n{font-weight:700;font-size:15px;margin-top:2px}.m .vs .sc{font-size:26px;font-weight:800;color:var(--acc);min-width:70px}
+.m .act{display:flex;gap:8px}.m .act button{flex:1}
+.st{padding:1px 7px;border-radius:6px;background:#333;font-size:11px}.st.live{background:var(--red);color:#fff}.st.finished{color:var(--mut)}
+.empty{color:var(--mut);padding:30px}
+</style></head><body>
+<header>
+  <h1>⚽ Matchups wählen</h1>
+  <div class="cur"><span style="color:var(--mut)">Aktuell:</span><img id="ch"><b id="ct"></b><img id="ca"></div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <button id="btnMu" onclick="send({type:'graphic',name:'matchup',visible:'toggle'})">Matchup-Grafik</button>
+    <a href="/control">← Steuerung</a>
+  </div>
+</header>
+<div class="bar" id="chips"></div>
+<details class="new" style="display:block"><summary style="cursor:pointer;font-weight:700">＋ Eigenes Matchup anlegen (z. B. K.-o.-Runde, Finale)</summary>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-top:12px">
+    <label>Heim<select id="nh"></select></label><label>Gast<select id="na"></select></label>
+    <label>Phase / Bezeichnung<input id="nl" value="Viertelfinale" list="phases"></label>
+    <datalist id="phases"><option>Achtelfinale<option>Viertelfinale<option>Halbfinale<option>Spiel um Platz 3<option>Finale</datalist>
+    <label>Uhrzeit<input id="nt" placeholder="14:30" style="min-width:90px;width:90px"></label>
+    <label>Platz<input id="nf" value="Platz 1" style="min-width:110px;width:110px"></label>
+    <button class="acc" onclick="addM(false)">Anlegen</button><button onclick="addM(true)">Anlegen & laden</button>
+  </div>
+</details>
+<div id="grid"></div>
+<script>
+let S=null,filter='alle';
+const send=a=>fetch('/api/action',{method:'POST',body:JSON.stringify(a)});
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const T=id=>S.teams.find(t=>t.id===id)||{id:0,name:'?',short:'?',color:'#888'};
+const logo=t=>t.logo||`/logo/${t.id}.svg?v=${encodeURIComponent(t.color+t.short)}`;
+const load=(id,show)=>{send({type:'setCurrent',matchId:id});if(show)send({type:'graphic',name:'matchup',visible:true})};
+function addM(makeCurrent){
+  send({type:'addMatch',home:+nh.value,away:+na.value,label:nl.value,time:nt.value,field:nf.value,makeCurrent});
+  filter='eigene';
+}
+function render(){
+  const cm=S.matches.find(m=>m.id===S.currentMatch);
+  ch.src=logo(T(cm.home));ca.src=logo(T(cm.away));ct.textContent=`${T(cm.home).name} – ${T(cm.away).name}`;
+  btnMu.className=S.graphics.matchup?'on':'';btnMu.textContent=(S.graphics.matchup?'● ':'○ ')+'Matchup-Grafik';
+  const groups=[...new Set(S.teams.map(t=>t.group))];
+  const chips=[['alle','Alle'],...groups.map(g=>[g,'Gruppe '+g]),['eigene','Eigene/K.o.'],['offen','Offen'],['live','Live'],['finished','Beendet']];
+  window._chips=chips.map(c=>c[0]).join();
+  chipsEl.innerHTML=chips.map(([k,l])=>`<button class="chip ${filter===k?'sel':''}" onclick="filter='${k}';render()">${l}</button>`).join('');
+  // Auswahllisten nur neu bauen, wenn sich Teams ändern
+  const opts=S.teams.map(t=>`<option value="${t.id}">${esc(t.name)} (${t.group})</option>`).join('');
+  if(nh.dataset.o!==opts){const h=nh.value,a=na.value;nh.innerHTML=opts;na.innerHTML=opts;nh.dataset.o=opts;nh.value=h||S.teams[0].id;na.value=a||S.teams[1].id}
+  const list=S.matches.filter(m=>filter==='alle'||m.group===filter||(filter==='eigene'&&m.custom)||(filter==='offen'&&m.status==='scheduled')||(filter==='live'&&m.status==='live')||(filter==='finished'&&m.status==='finished'));
+  grid.innerHTML=list.length?list.map(m=>{const h=T(m.home),a=T(m.away);
+    const sc=m.status==='scheduled'?'VS':`${m.hs}:${m.as}`;
+    return `<div class="m ${m.id===S.currentMatch?'current':''}"><div class="meta"><span>#${m.id} · ${/^[A-Z]$/.test(m.group)?'Gruppe '+m.group:esc(m.group)} · ${esc(m.time)} · ${esc(m.field)}</span><span class="st ${m.status}">${m.status==='live'?'LIVE':m.status==='finished'?'Ende':'offen'}</span></div>
+    <div class="vs"><div><img src="${logo(h)}"><div class="n">${esc(h.name)}</div></div><div class="sc">${sc}</div><div><img src="${logo(a)}"><div class="n">${esc(a.name)}</div></div></div>
+    <div class="act"><button onclick="load(${m.id},false)">Laden</button><button class="acc" onclick="load(${m.id},true)">Laden + Matchup zeigen</button>${m.custom&&m.id!==S.currentMatch?`<button style="flex:0" title="Löschen" onclick="send({type:'deleteMatch',matchId:${m.id}})">🗑</button>`:''}</div></div>`}).join(''):'<div class="empty">Keine Spiele in diesem Filter.</div>';
+}
+const chipsEl=document.getElementById('chips');
+const es=new EventSource('/events');
+es.onmessage=e=>{S=JSON.parse(e.data);render()};
+</script></body></html>

@@ -1,0 +1,26 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Scorebug</title>
+<link rel="stylesheet" href="overlay.css"><script src="overlay.js"></script></head><body>
+<div class="bug ease" id="bug">
+  <div class="row">
+    <div class="team home"><span id="hb"></span><span class="name" id="hn"></span></div>
+    <div class="score"><b id="hs">0</b><span>:</span><b id="as">0</b></div>
+    <div class="team away"><span id="ab"></span><span class="name" id="an"></span></div>
+  </div>
+  <div class="sub"><div class="clock"><span id="clock">00:00</span><span class="field" id="field"></span></div></div>
+</div>
+<script>
+let last = '';
+connect(s => {
+  document.getElementById('bug').classList.toggle('show', s.graphics.scorebug);
+  const m = curMatch(); if (!m) return;
+  const h = team(m.home), a = team(m.away);
+  hn.textContent = h.short; an.textContent = a.short;
+  hb.innerHTML = badge(h); ab.innerHTML = badge(a);
+  field.textContent = m.field;
+  const sig = m.hs + ':' + m.as + '@' + m.id;
+  const el = (id, v) => { const e = document.getElementById(id); if (e.textContent != v) { e.textContent = v; if (last.split('@')[1] == m.id) { e.classList.remove('pop'); void e.offsetWidth; e.classList.add('pop'); } } };
+  el('hs', m.hs); el('as', m.as);
+  last = sig;
+});
+setInterval(() => { if (S) document.getElementById('clock').textContent = fmtClock(clockSecs()); }, 200);
+</script></body></html>

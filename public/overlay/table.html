@@ -1,0 +1,16 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Tabelle</title>
+<link rel="stylesheet" href="overlay.css"><script src="overlay.js"></script></head><body>
+<div class="panel" id="p"></div>
+<script>
+// ?g=A erzwingt eine Gruppe, sonst wird die im Panel gewählte genutzt
+let sig = '';
+connect(s => {
+  const g = param('g') || s.tableGroup;
+  const rows = s.tables[g] || [];
+  const html = `<h1>GRUPPE ${esc(g)}<small>${esc(s.tournament.title)}</small></h1>
+    <div class="row head"><div class="pos">#</div><div class="tcell">Team</div><div class="n">Sp</div><div class="n">S</div><div class="n">U</div><div class="n">N</div><div class="n">Tore</div><div class="n">Diff</div><div class="n pts">Pkt</div></div>` +
+    rows.map((r, i) => { const t = team(r.id); return `<div class="row ${i < 2 ? 'q' : ''}" style="--i:${i}"><div class="pos">${i + 1}</div><div class="tcell">${badge(t)}${esc(t.name)}</div><div class="n">${r.p}</div><div class="n">${r.w}</div><div class="n">${r.d}</div><div class="n">${r.l}</div><div class="n">${r.gf}:${r.ga}</div><div class="n">${r.gd > 0 ? '+' : ''}${r.gd}</div><div class="n pts">${r.pts}</div></div>`; }).join('');
+  if (html !== sig) { sig = html; p.innerHTML = html; }
+  p.classList.toggle('show', s.graphics.table);
+});
+</script></body></html>
